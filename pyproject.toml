@@ -38,8 +38,8 @@ dev = ["pytest>=8.2.0"]
 llm-shield = "app.cli:app"
 
 [project.urls]
-Repository = "https://github.com/darkslayer3324j/llm-shield"
-Issues = "https://github.com/YOUR-USERNAME/darkslayer3324j/issues"
+Repository = "https://github.com/Darkslayer3324j/llm-shield"
+Issues = "https://github.com/Darkslayer3324j/llm-sheild/issues"
 
 [build-system]
 requires = ["setuptools>=68.0"]

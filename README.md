@@ -1,6 +1,6 @@
 # llm-shield
 
-[![tests](https://github.com/darkslayer3324j/llm-shield/actions/workflows/tests.yml/badge.svg)](https://github.com/darkslayer3324j/llm-shield/actions/workflows/tests.yml)
+[![tests](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml/badge.svg)](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 A local, zero-trust LLM proxy. Point your OpenAI SDK, LangChain, or any HTTP
