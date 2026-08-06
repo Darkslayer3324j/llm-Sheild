@@ -1,0 +1,49 @@
+[project]
+name = "llm-shield"
+version = "0.3.0"
+description = "A local, zero-trust LLM proxy: PII redaction, multi-provider routing, spend circuit breaker, and caching."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+authors = [
+    Syed Muhammad Nafay Hassan Rizvi 
+]
+keywords = ["llm", "proxy", "pii", "security", "openai", "anthropic", "cost-tracking"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "tiktoken>=0.7.0",
+    "aiosqlite>=0.20.0",
+    "typer>=0.12.0",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0"]
+
+[project.scripts]
+llm-shield = "app.cli:app"
+
+[project.urls]
+Repository = "https://github.com/darkslayer3324j/llm-shield"
+Issues = "https://github.com/YOUR-USERNAME/darkslayer3324j/issues"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]

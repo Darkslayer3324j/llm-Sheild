@@ -1,0 +1,30 @@
+# Secrets — never commit real provider keys or virtual key databases.
+.env
+*.env
+!.env.example
+
+# The spend ledger / virtual keys / cache — local runtime state, not source.
+*.db
+*.db-journal
+pricing_overrides.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docker volume mount target from docker-compose.yml
+data/
