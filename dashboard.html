@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>llm-shield — control room</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --panel: #11151c;
+    --panel-border: #1e2430;
+    --text: #e6e9ef;
+    --text-dim: #7c8494;
+    --accent: #47d6b6;
+    --accent-dim: #1f4b42;
+    --warn: #f0a83e;
+    --danger: #e8556a;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #0d1220 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 28px 32px 60px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .shield-badge { width: 34px; height: 34px; flex-shrink: 0; }
+  .brand h1 { font-size: 18px; font-weight: 650; letter-spacing: 0.01em; margin: 0; }
+  .brand .subtitle { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); border: 1px solid rgba(71, 214, 182, 0.35);
+    padding: 6px 12px; border-radius: 999px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 0 rgba(71, 214, 182, 0.6); animation: pulse 2.4s infinite;
+  }
+
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(71, 214, 182, 0.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(71, 214, 182, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(71, 214, 182, 0); }
+  }
+
+  .status-pill.error { color: var(--danger); background: rgba(232, 85, 106, 0.12); border-color: rgba(232, 85, 106, 0.35); }
+  .status-pill.error .status-dot { background: var(--danger); animation: none; }
+
+  .gate {
+    max-width: 480px;
+    margin: 80px auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+  }
+  .gate p { color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-bottom: 18px; }
+  .gate input {
+    width: 100%; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--panel-border); background: #0d1017; color: var(--text);
+    font-family: var(--mono); font-size: 13px; margin-bottom: 12px;
+  }
+  .gate button, .btn {
+    background: var(--accent); color: #08110e; border: none; border-radius: 8px;
+    padding: 10px 16px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: var(--sans);
+  }
+  .gate button:hover, .btn:hover { opacity: 0.9; }
+  .gate .error-msg { color: var(--danger); font-family: var(--mono); font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+  #app { display: none; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .kpi { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 16px 18px; }
+  .kpi .label { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px; }
+  .kpi .value { font-family: var(--mono); font-size: 26px; font-weight: 600; }
+  .kpi .value.accent { color: var(--accent); }
+
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px; padding: 18px 20px; margin-bottom: 14px; }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 14px 0; font-weight: 600; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .panel-head h2 { margin: 0; }
+
+  .feed { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+  .feed-item { font-family: var(--mono); font-size: 12px; display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #0d1017; border: 1px solid var(--panel-border); border-radius: 6px; }
+  .feed-item .badge { color: var(--accent); }
+  .feed-item .time { color: var(--text-dim); }
+
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--panel-border); }
+  th { color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em; }
+
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 600; }
+  .tag.hit { background: rgba(71, 214, 182, 0.15); color: var(--accent); }
+  .tag.miss { background: rgba(124, 132, 148, 0.15); color: var(--text-dim); }
+  .tag.admin { background: rgba(240, 168, 62, 0.15); color: var(--warn); }
+  .tag.revoked { background: rgba(232, 85, 106, 0.15); color: var(--danger); }
+
+  .empty { color: var(--text-dim); font-family: var(--mono); font-size: 12px; padding: 20px 0; text-align: center; }
+  canvas { max-height: 220px; }
+
+  .key-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .key-form input { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--panel-border); background: #0d1017; color: var(--text); font-family: var(--mono); font-size: 12px; }
+  .key-form input[type="text"] { flex: 1; min-width: 140px; }
+  .key-form input[type="number"] { width: 110px; }
+  .icon-btn { background: transparent; border: 1px solid var(--panel-border); color: var(--danger); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: var(--mono); }
+  .icon-btn:hover { background: rgba(232, 85, 106, 0.1); }
+  .key-cell { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <svg class="shield-badge" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 12px;">
+    <path d="M50 4 L92 20 V50 C92 74 74 92 50 98 C26 92 8 74 8 50 V20 Z" fill="#0d1017" stroke="#47d6b6" stroke-width="3"/>
+    <path d="M38 50 L46 58 L64 40" fill="none" stroke="#47d6b6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p>Enter an <strong>admin</strong> llm-shield key to view the control room.
+  This key is kept in memory for this page only — it's never saved to disk or browser storage.</p>
+  <input type="password" id="key-input" placeholder="llmshield-master-..." autocomplete="off" />
+  <button onclick="unlock()">Unlock</button>
+  <div class="error-msg" id="gate-error"></div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <svg class="shield-badge" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 4 L92 20 V50 C92 74 74 92 50 98 C26 92 8 74 8 50 V20 Z" fill="#11151c" stroke="#47d6b6" stroke-width="3"/>
+        <path d="M50 22 L74 32 V50 C74 64 64 76 50 80 C36 76 26 64 26 50 V32 Z" fill="none" stroke="#47d6b6" stroke-width="2" opacity="0.55"/>
+        <path d="M38 50 L46 58 L64 40" fill="none" stroke="#47d6b6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div><h1>llm-shield</h1><div class="subtitle">local proxy · control room</div></div>
+    </div>
+    <div class="status-pill" id="status-pill"><span class="status-dot"></span><span id="status-text">live</span></div>
+  </header>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="label">Spend today</div><div class="value accent" id="kpi-spend">$0.00</div></div>
+    <div class="kpi"><div class="label">Requests today</div><div class="value" id="kpi-requests">0</div></div>
+    <div class="kpi"><div class="label">PII redactions</div><div class="value" id="kpi-redactions">0</div></div>
+    <div class="kpi"><div class="label">Cache hit rate</div><div class="value" id="kpi-cache">0%</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Spend — last 7 days</h2>
+      <canvas id="spend-chart"></canvas>
+    </div>
+    <div class="panel">
+      <h2>Recent activity</h2>
+      <div class="feed" id="feed"><div class="empty">Waiting for requests…</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Request log</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Provider</th><th>Model</th><th>Tokens (in/out)</th><th>Cost</th><th>Redactions</th><th>Cache</th><th>Latency</th></tr></thead>
+      <tbody id="log-body"><tr><td colspan="8" class="empty">No requests yet.</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Virtual keys</h2>
+    </div>
+    <div class="key-form">
+      <input type="text" id="new-key-name" placeholder="key name (e.g. my-app)" />
+      <input type="number" id="new-key-budget" placeholder="daily budget $" value="5.0" step="0.5" />
+      <input type="number" id="new-key-rpm" placeholder="rate limit /min" value="60" step="10" />
+      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--text-dim);">
+        <input type="checkbox" id="new-key-admin" style="width:auto;" /> admin
+      </label>
+      <button class="btn" onclick="createKey()">Create key</button>
+    </div>
+    <table>
+      <thead><tr><th>Key</th><th>Name</th><th>Budget/day</th><th>Rate limit</th><th>Status</th><th></th></tr></thead>
+      <tbody id="keys-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Kept ONLY in memory for this page load — never written to localStorage,
+// sessionStorage, or any persistent browser storage.
+let adminKey = null;
+let chart = null;
+
+function authHeaders() {
+  return { "Authorization": "Bearer " + adminKey };
+}
+
+async function unlock() {
+  const input = document.getElementById("key-input").value.trim();
+  const errorEl = document.getElementById("gate-error");
+  if (!input) { errorEl.textContent = "Enter a key."; return; }
+
+  try {
+    const res = await fetch("/api/stats", { headers: { "Authorization": "Bearer " + input } });
+    if (res.status === 401) { errorEl.textContent = "Invalid key."; return; }
+    if (res.status === 403) { errorEl.textContent = "This key is valid but not an admin key."; return; }
+    if (!res.ok) { errorEl.textContent = "Unexpected error (" + res.status + ")."; return; }
+  } catch (e) {
+    errorEl.textContent = "Could not reach llm-shield.";
+    return;
+  }
+
+  adminKey = input;
+  document.getElementById("gate").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  refresh();
+  setInterval(refresh, 5000);
+}
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+async function refresh() {
+  if (!adminKey) return;
+  let data;
+  try {
+    const res = await fetch("/api/stats", { headers: authHeaders() });
+    if (res.status === 401 || res.status === 403) {
+      setStatus(false, "auth expired — reload");
+      return;
+    }
+    data = await res.json();
+    setStatus(true, "live");
+  } catch (e) {
+    setStatus(false, "disconnected");
+    return;
+  }
+
+  document.getElementById("kpi-spend").textContent = "$" + data.today_spend_usd.toFixed(4);
+  document.getElementById("kpi-requests").textContent = data.today_requests;
+  document.getElementById("kpi-redactions").textContent = data.today_redactions;
+  document.getElementById("kpi-cache").textContent = Math.round(data.cache_hit_rate * 100) + "%";
+
+  const labels = data.spend_last_7_days.map(r => r.day.slice(5));
+  const values = data.spend_last_7_days.map(r => r.spend);
+  if (!chart) {
+    const ctx = document.getElementById("spend-chart").getContext("2d");
+    chart = new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets: [{ data: values, backgroundColor: "#47d6b6", borderRadius: 4, maxBarThickness: 36 }] },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#7c8494", font: { family: "monospace", size: 10 } }, grid: { display: false } },
+          y: { ticks: { color: "#7c8494", font: { family: "monospace", size: 10 } }, grid: { color: "#1e2430" } }
+        }
+      }
+    });
+  } else {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.update();
+  }
+
+  const feedEl = document.getElementById("feed");
+  feedEl.innerHTML = data.recent_requests.length === 0
+    ? '<div class="empty">Waiting for requests…</div>'
+    : data.recent_requests.slice(0, 8).map(r => `
+        <div class="feed-item">
+          <span>${r.provider} · ${r.model}</span>
+          <span class="badge">${r.redaction_count} redacted</span>
+          <span class="time">${fmtTime(r.timestamp)}</span>
+        </div>`).join("");
+
+  const logBody = document.getElementById("log-body");
+  logBody.innerHTML = data.recent_requests.length === 0
+    ? '<tr><td colspan="8" class="empty">No requests yet.</td></tr>'
+    : data.recent_requests.map(r => `
+        <tr>
+          <td>${fmtTime(r.timestamp)}</td><td>${r.provider}</td><td>${r.model}</td>
+          <td>${r.prompt_tokens} / ${r.completion_tokens}</td><td>$${r.cost_usd.toFixed(5)}</td>
+          <td>${r.redaction_count}</td>
+          <td><span class="tag ${r.cache_hit ? 'hit' : 'miss'}">${r.cache_hit ? 'HIT' : 'MISS'}</span></td>
+          <td>${r.latency_ms}ms</td>
+        </tr>`).join("");
+
+  await refreshKeys();
+}
+
+async function refreshKeys() {
+  try {
+    const res = await fetch("/api/keys", { headers: authHeaders() });
+    if (!res.ok) return;
+    const keys = await res.json();
+    const body = document.getElementById("keys-body");
+    body.innerHTML = keys.length === 0
+      ? '<tr><td colspan="6" class="empty">No keys yet.</td></tr>'
+      : keys.map(k => `
+          <tr>
+            <td class="key-cell" title="${k.key}">${k.key}</td>
+            <td>${k.name}${k.is_admin ? ' <span class="tag admin">ADMIN</span>' : ''}</td>
+            <td>$${k.daily_budget_usd.toFixed(2)}</td>
+            <td>${k.rate_limit_rpm}/min</td>
+            <td>${k.is_active ? '<span class="tag hit">active</span>' : '<span class="tag revoked">revoked</span>'}</td>
+            <td>${k.is_active ? `<button class="icon-btn" onclick="revokeKey('${k.key}')">Revoke</button>` : ''}</td>
+          </tr>`).join("");
+  } catch (e) { /* dashboard stays on last-known state */ }
+}
+
+async function createKey() {
+  const name = document.getElementById("new-key-name").value.trim();
+  if (!name) { alert("Give the key a name."); return; }
+  const daily_budget_usd = parseFloat(document.getElementById("new-key-budget").value) || 5.0;
+  const rate_limit_rpm = parseInt(document.getElementById("new-key-rpm").value) || 60;
+  const is_admin = document.getElementById("new-key-admin").checked;
+
+  const res = await fetch("/api/keys", {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ name, daily_budget_usd, rate_limit_rpm, is_admin })
+  });
+  if (!res.ok) { alert("Failed to create key."); return; }
+  const created = await res.json();
+  document.getElementById("new-key-name").value = "";
+  alert("Created key:\n" + created.key + "\n\nCopy it now — it won't be shown again here.");
+  refreshKeys();
+}
+
+async function revokeKey(key) {
+  if (!confirm("Revoke this key? It will stop working immediately.")) return;
+  await fetch("/api/keys/" + encodeURIComponent(key), { method: "DELETE", headers: authHeaders() });
+  refreshKeys();
+}
+
+function setStatus(ok, text) {
+  const pill = document.getElementById("status-pill");
+  document.getElementById("status-text").textContent = text;
+  pill.classList.toggle("error", !ok);
+}
+
+document.getElementById("key-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") unlock();
+});
+</script>
+
+</body>
+</html>
