@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [
-    Syed Muhammad Nafay Hassan Rizvi 
+    { name = "Syed Muhammad Nafay Hassan Rizvi" },
 ]
 keywords = ["llm", "proxy", "pii", "security", "openai", "anthropic", "cost-tracking"]
 classifiers = [
@@ -38,8 +38,8 @@ dev = ["pytest>=8.2.0"]
 llm-shield = "app.cli:app"
 
 [project.urls]
-Repository = "https://github.com/Darkslayer3324j/llm-shield"
-Issues = "https://github.com/Darkslayer3324j/llm-sheild/issues"
+Repository = "https://github.com/Darkslayer3324j/llm-Sheild"
+Issues = "https://github.com/Darkslayer3324j/llm-Sheild/issues"
 
 [build-system]
 requires = ["setuptools>=68.0"]

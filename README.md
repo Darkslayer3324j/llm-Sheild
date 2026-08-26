@@ -1,6 +1,6 @@
 # llm-shield
 
-[![tests](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml/badge.svg)](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml)
+[![tests](https://github.com/Darkslayer3324j/llm-Sheild/actions/workflows/tests.yml/badge.svg)](https://github.com/Darkslayer3324j/llm-Sheild/actions/workflows/tests.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 A local, zero-trust LLM proxy. Point your OpenAI SDK, LangChain, or any HTTP
@@ -150,11 +150,12 @@ anywhere as plaintext).
 pytest tests/ -v
 ```
 
-60 tests covering the sanitizer, pricing/token counting, provider
+92 tests covering the sanitizer, pricing/token counting, provider
 request/response translation (including streaming SSE translation for both
 OpenAI-compatible and Anthropic), the boundary-safe streaming unmasker, the
 SQLite spend ledger + cache + key store (including the schema migration
-path), and auth/admin gating.
+path), auth/admin gating, request/response models, and the end-to-end proxy
+route itself (PII redaction, caching, unmasking, request-size guard).
 
 ## Configuration reference
 
