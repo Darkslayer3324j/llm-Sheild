@@ -320,7 +320,7 @@ async def chat_completions(
     try:
         provider = build_provider(provider_name, settings)
     except ProviderError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
     fallback = _parse_fallback(x_llmshield_fallback)
 
@@ -409,7 +409,7 @@ async def _handle_buffered(
             client, provider, provider_name, sanitized_body, fallback, request_id
         )
     except ProviderError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     latency_ms = int((time.monotonic() - start) * 1000)
 
     if provider_response.status_code >= 400:
