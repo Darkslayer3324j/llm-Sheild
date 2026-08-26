@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [
-    Syed Muhammad Nafay Hassan Rizvi 
+    { name = "Syed Muhammad Nafay Hassan Rizvi" },
 ]
 keywords = ["llm", "proxy", "pii", "security", "openai", "anthropic", "cost-tracking"]
 classifiers = [
