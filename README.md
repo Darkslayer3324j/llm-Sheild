@@ -150,12 +150,13 @@ anywhere as plaintext).
 pytest tests/ -v
 ```
 
-92 tests covering the sanitizer, pricing/token counting, provider
+94 tests covering the sanitizer, pricing/token counting, provider
 request/response translation (including streaming SSE translation for both
 OpenAI-compatible and Anthropic), the boundary-safe streaming unmasker, the
 SQLite spend ledger + cache + key store (including the schema migration
 path), auth/admin gating, request/response models, and the end-to-end proxy
-route itself (PII redaction, caching, unmasking, request-size guard).
+route itself (PII redaction, caching, unmasking, request-size guard, and
+provider-fallback cost/usage attribution).
 
 ## Configuration reference
 

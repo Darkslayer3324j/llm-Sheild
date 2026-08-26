@@ -373,7 +373,7 @@ async def chat_completions(
         )
 
     return await _handle_buffered(
-        client, db, provider, provider_name, sanitized_body, payload.model,
+        client, db, provider, provider_name, sanitized_body,
         key_record, redaction_summary, combined_mapping, x_llmshield_unmask,
         cache_key, daily_spend_so_far, fallback, request_id,
     )
@@ -381,9 +381,12 @@ async def chat_completions(
 
 async def _send_with_fallback(client, provider, provider_name, sanitized_body, fallback, request_id):
     """Try the primary provider; on failure, if a fallback 'provider/model' was
-    given, swap both and retry exactly once. Returns (response, provider_name_used)."""
+    given, swap both and retry exactly once. Returns (response, provider_name_used,
+    model_used) — model_used is the fallback model when the fallback answered,
+    since pricing/usage must be attributed to whichever model actually served
+    the request, not the one the client originally asked for."""
     try:
-        return await provider.send(client, sanitized_body), provider_name
+        return await provider.send(client, sanitized_body), provider_name, sanitized_body.get("model")
     except ProviderError as primary_exc:
         if not fallback:
             raise
@@ -395,17 +398,17 @@ async def _send_with_fallback(client, provider, provider_name, sanitized_body, f
         fb_body = dict(sanitized_body)
         fb_body["model"] = fb_model
         fb_provider = build_provider(fb_provider_name, settings)
-        return await fb_provider.send(client, fb_body), fb_provider_name
+        return await fb_provider.send(client, fb_body), fb_provider_name, fb_model
 
 
 async def _handle_buffered(
-    client, db, provider, provider_name, sanitized_body, requested_model,
+    client, db, provider, provider_name, sanitized_body,
     key_record, redaction_summary, combined_mapping, unmask_header,
     cache_key, daily_spend_so_far, fallback, request_id,
 ):
     start = time.monotonic()
     try:
-        provider_response, used_provider = await _send_with_fallback(
+        provider_response, used_provider, model_used = await _send_with_fallback(
             client, provider, provider_name, sanitized_body, fallback, request_id
         )
     except ProviderError as exc:
@@ -415,11 +418,15 @@ async def _handle_buffered(
     if provider_response.status_code >= 400:
         return JSONResponse(status_code=provider_response.status_code, content=provider_response.body)
 
+    # Price against model_used (the model that actually served the request),
+    # not requested_model — a fallback response is priced under whatever the
+    # client originally asked for otherwise, which can be wildly wrong when
+    # the fallback model has very different per-token pricing.
     actual_cost = estimate_cost_usd(
-        requested_model, provider_response.prompt_tokens, provider_response.completion_tokens, settings.db_path
+        model_used, provider_response.prompt_tokens, provider_response.completion_tokens, settings.db_path
     )
     await db.record_usage(
-        api_key=key_record.key, provider=used_provider, model=requested_model,
+        api_key=key_record.key, provider=used_provider, model=model_used,
         prompt_tokens=provider_response.prompt_tokens, completion_tokens=provider_response.completion_tokens,
         cost_usd=actual_cost, redaction_count=redaction_summary.total_redactions,
         cache_hit=False, latency_ms=latency_ms,
@@ -499,6 +506,7 @@ async def _handle_streaming(
         start = time.monotonic()
         active_provider_name = provider_name
         active_provider = provider
+        active_model = requested_model
 
         async def _run(prov, body, usage_sink):
             source = prov.send_stream(client, body, usage_sink)
@@ -528,6 +536,7 @@ async def _handle_streaming(
             fb_body["model"] = fb_model
             active_provider = build_provider(fb_provider_name, settings)
             active_provider_name = fb_provider_name
+            active_model = fb_model
             usage = StreamUsage()  # restart accounting against the fallback's own output
             try:
                 async for chunk in _run(active_provider, fb_body, usage):
@@ -538,12 +547,15 @@ async def _handle_streaming(
                 return
 
         latency_ms = int((time.monotonic() - start) * 1000)
-        prompt_tokens = usage.prompt_tokens or count_tokens(_estimate_prompt_text(sanitized_body), requested_model)
-        completion_tokens = usage.completion_tokens or count_tokens(usage.full_text, requested_model)
-        cost = estimate_cost_usd(requested_model, prompt_tokens, completion_tokens, settings.db_path)
+        # Price against active_model (the model that actually served the
+        # stream), not requested_model — see the equivalent note in
+        # _handle_buffered for why this matters when a fallback answered.
+        prompt_tokens = usage.prompt_tokens or count_tokens(_estimate_prompt_text(sanitized_body), active_model)
+        completion_tokens = usage.completion_tokens or count_tokens(usage.full_text, active_model)
+        cost = estimate_cost_usd(active_model, prompt_tokens, completion_tokens, settings.db_path)
 
         await db.record_usage(
-            api_key=key_record.key, provider=active_provider_name, model=requested_model,
+            api_key=key_record.key, provider=active_provider_name, model=active_model,
             prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, cost_usd=cost,
             redaction_count=redaction_summary.total_redactions, cache_hit=False, latency_ms=latency_ms,
         )
