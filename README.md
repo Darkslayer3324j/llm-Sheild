@@ -1,6 +1,6 @@
 # llm-shield
 
-[![tests](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml/badge.svg)](https://github.com/Darkslayer3324j/llm-shield/actions/workflows/tests.yml)
+[![tests](https://github.com/Darkslayer3324j/llm-Sheild/actions/workflows/tests.yml/badge.svg)](https://github.com/Darkslayer3324j/llm-Sheild/actions/workflows/tests.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 A local, zero-trust LLM proxy. Point your OpenAI SDK, LangChain, or any HTTP
@@ -19,9 +19,14 @@ with no data leaving your machine except the (sanitized) request itself.
 
 ## Features
 
-- **PII redaction** — emails, API keys, credit cards (Luhn-validated), SSNs,
-  phone numbers, IPs, and optional full-name heuristics, with reversible
-  placeholders so you can unmask a response on demand.
+- **PII redaction** — emails, credit cards (Luhn-validated), SSNs (structurally
+  validated), phone numbers, IPs, and optional full-name heuristics, with
+  reversible placeholders so you can unmask a response on demand.
+- **Secret detection** — OpenAI (legacy, project, service-account), Anthropic,
+  Google (API keys and OAuth tokens), AWS (long-lived and temporary), GitHub
+  (classic, fine-grained, and server tokens), Stripe, Slack, and generic bearer
+  tokens. Separator-less SSNs are opt-in via `mask_ssn_without_separators`,
+  since a bare nine-digit run is indistinguishable from an order number.
 - **Works with any model** — native adapters for OpenAI and Anthropic
   (translating Claude's Messages API to/from the OpenAI shape, streaming
   included), plus OpenAI-compatible passthrough for Gemini, Ollama,
@@ -150,11 +155,13 @@ anywhere as plaintext).
 pytest tests/ -v
 ```
 
-60 tests covering the sanitizer, pricing/token counting, provider
+94 tests covering the sanitizer, pricing/token counting, provider
 request/response translation (including streaming SSE translation for both
 OpenAI-compatible and Anthropic), the boundary-safe streaming unmasker, the
 SQLite spend ledger + cache + key store (including the schema migration
-path), and auth/admin gating.
+path), auth/admin gating, request/response models, and the end-to-end proxy
+route itself (PII redaction, caching, unmasking, request-size guard, and
+provider-fallback cost/usage attribution).
 
 ## Configuration reference
 

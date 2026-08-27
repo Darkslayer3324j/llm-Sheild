@@ -22,7 +22,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        # Installs the runtime dependencies *and* the dev extra (pytest), and
+        # puts the package on the path so `import app` resolves. Installing
+        # requirements.txt alone left pytest missing, so this job failed with
+        # `pytest: command not found` (exit 127) before it ran a single test.
+        run: pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest tests/ -v

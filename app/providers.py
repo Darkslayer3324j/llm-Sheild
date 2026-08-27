@@ -112,8 +112,8 @@ class OpenAICompatibleProvider(BaseProvider):
 
         try:
             body = resp.json()
-        except ValueError:
-            raise ProviderError(502, f"{self.name} returned a non-JSON response.")
+        except ValueError as exc:
+            raise ProviderError(502, f"{self.name} returned a non-JSON response.") from exc
 
         usage = body.get("usage", {})
         return ProviderResponse(
@@ -280,8 +280,8 @@ class AnthropicProvider(BaseProvider):
 
         try:
             raw_body = resp.json()
-        except ValueError:
-            raise ProviderError(502, "anthropic returned a non-JSON response.")
+        except ValueError as exc:
+            raise ProviderError(502, "anthropic returned a non-JSON response.") from exc
 
         if resp.status_code >= 400:
             # Anthropic error shape: {"type": "error", "error": {"type": ..., "message": ...}}
