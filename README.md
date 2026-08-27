@@ -19,9 +19,14 @@ with no data leaving your machine except the (sanitized) request itself.
 
 ## Features
 
-- **PII redaction** — emails, API keys, credit cards (Luhn-validated), SSNs,
-  phone numbers, IPs, and optional full-name heuristics, with reversible
-  placeholders so you can unmask a response on demand.
+- **PII redaction** — emails, credit cards (Luhn-validated), SSNs (structurally
+  validated), phone numbers, IPs, and optional full-name heuristics, with
+  reversible placeholders so you can unmask a response on demand.
+- **Secret detection** — OpenAI (legacy, project, service-account), Anthropic,
+  Google (API keys and OAuth tokens), AWS (long-lived and temporary), GitHub
+  (classic, fine-grained, and server tokens), Stripe, Slack, and generic bearer
+  tokens. Separator-less SSNs are opt-in via `mask_ssn_without_separators`,
+  since a bare nine-digit run is indistinguishable from an order number.
 - **Works with any model** — native adapters for OpenAI and Anthropic
   (translating Claude's Messages API to/from the OpenAI shape, streaming
   included), plus OpenAI-compatible passthrough for Gemini, Ollama,
